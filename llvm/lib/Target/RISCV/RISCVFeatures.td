@@ -1479,6 +1479,14 @@ def HasVendorXRivosVizip
       AssemblerPredicate<(all_of FeatureVendorXRivosVizip),
                          "'XRivosVizip' (Rivos Vector Register Zips)">;
 
+def FeatureVendorXSMTVDot
+    : RISCVExtension<1, 0, "SpacemiT Vector Dot Product Extension",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSMTVDot
+    : Predicate<"Subtarget->hasVendorXSMTVDot()">,
+      AssemblerPredicate<(all_of FeatureVendorXSMTVDot),
+                         "'XSMTVDot' (SpacemiT Vector Dot Product Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//

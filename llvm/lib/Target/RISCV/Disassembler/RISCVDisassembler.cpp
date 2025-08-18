@@ -728,12 +728,13 @@ static constexpr FeatureBitset XTHeadGroup = {
     RISCV::FeatureVendorXTHeadMemPair, RISCV::FeatureVendorXTHeadSync,
     RISCV::FeatureVendorXTHeadVdot};
 
+static constexpr FeatureBitset XSMTGroup = {RISCV::FeatureVendorXSMTVDot};
+
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
     {DecoderTableXVentana32,
      {RISCV::FeatureVendorXVentanaCondOps},
      "XVentanaCondOps"},
-    {DecoderTableXTHead32, XTHeadGroup, "T-Head extensions"},
     {DecoderTableXSfvector32, XSfVectorGroup, "SiFive vector extensions"},
     {DecoderTableXSfsystem32, XSfSystemGroup, "SiFive system extensions"},
     {DecoderTableXSfcease32, {RISCV::FeatureVendorXSfcease}, "SiFive sf.cease"},
@@ -741,6 +742,7 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXmipscmove32,
      {RISCV::FeatureVendorXMIPSCMove},
      "MIPS mips.ccmov"},
+    {DecoderTableXSMT32, XSMTGroup, "SpacemiT extensions"},
     // Standard Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
     {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
