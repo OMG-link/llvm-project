@@ -362,7 +362,7 @@ foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
   // Unit-stride loads and stores
-  let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, ConstValueUntilLMULThenDoubleBase<"M2", 3, 4, mx>.c)] in {
+  let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, ConstValueUntilLMULThenDoubleBase<"M1", 1, 2, mx>.c)] in {
     defm "" : LMULWriteResMX<"WriteVLDE", [SMX60_VCQ, SMX60_LD], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSTE", [SMX60_VCQ, SMX60_ST], mx, IsWorstCase>;
   }
@@ -485,7 +485,7 @@ foreach mx = SchedMxListW in {
 
   let Latency = Get4588Latency<mx>.c,
       AcquireAtCycles = [0, 1],
-      ReleaseAtCycles = [1, !add(1, ConstValueUntilLMULThenDoubleBase<"M1", 2, 2, mx>.c)] in {
+      ReleaseAtCycles = [1, !add(1, ConstValueUntilLMULThenDoubleBase<"M1", 1, 2, mx>.c)] in {
     defm "" : LMULWriteResMX<"WriteVIWALUV", [SMX60_VCQ, SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIWALUX", [SMX60_VCQ, SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIWALUI", [SMX60_VCQ, SMX60_VIEU], mx, IsWorstCase>;
