@@ -128,6 +128,8 @@ def SpacemitX60Model : SchedMachineModel {
 
   let CompleteModel = 0;
 
+  let EnableIntervals = true;
+
   let UnsupportedFeatures = [HasStdExtZknd, HasStdExtZkne, HasStdExtZknh,
                              HasStdExtZksed, HasStdExtZksh, HasStdExtZkr];
 }
