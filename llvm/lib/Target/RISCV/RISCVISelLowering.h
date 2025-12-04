@@ -984,6 +984,7 @@ private:
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorIntrinsicOperands(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVectorMaskVecReduction(SDValue Op, SelectionDAG &DAG,

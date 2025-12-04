@@ -9976,6 +9976,45 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
 }
 
+SDValue
+RISCVTargetLowering::lowerVectorIntrinsicOperands(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  bool hasFixedLengthVector = Op.getSimpleValueType().isFixedLengthVector();
+  for (const SDValue &V : Op->op_values()) {
+    if (V.getValueType().isFixedLengthVector()) {
+      hasFixedLengthVector = true;
+      break;
+    }
+  }
+
+  if (hasFixedLengthVector) {
+    SDLoc DL(Op);
+
+    // Create list of operands by converting existing ones to scalable types.
+    SmallVector<SDValue, 6> Ops;
+    for (const SDValue &V : Op->op_values()) {
+      if (V.getValueType().isFixedLengthVector()) {
+        MVT VT = V.getSimpleValueType();
+        MVT ContainerVT = getContainerForFixedLengthVector(VT);
+        Ops.push_back(convertToScalableVector(ContainerVT, V, DAG, Subtarget));
+      } else {
+        Ops.push_back(V);
+      }
+    }
+
+    if (MVT ResVT = Op.getSimpleValueType(); ResVT.isFixedLengthVector()) {
+      MVT ResContainerVT = getContainerForFixedLengthVector(ResVT);
+      SDValue ScalableRes =
+          DAG.getNode(Op.getOpcode(), DL, ResContainerVT, Ops, Op->getFlags());
+      return convertFromScalableVector(ResVT, ScalableRes, DAG, Subtarget);
+    } else {
+      return DAG.getNode(Op.getOpcode(), DL, ResVT, Ops, Op->getFlags());
+    }
+  } else {
+    return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
+  }
+}
+
 // Lower the llvm.get.vector.length intrinsic to vsetvli. We only support
 // scalable vector llvm.get.vector.length for now.
 //
@@ -10067,7 +10106,7 @@ static inline void promoteVCIXScalar(const SDValue &Op,
   MVT OpVT = ScalarOp.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
 
-  // The code below is partially copied from lowerVectorIntrinsicScalars.
+  // The code below is partially copied from lowerVectorIntrinsicOperands.
   // If this isn't a scalar, or its type is XLenVT we're done.
   if (!OpVT.isScalarInteger() || OpVT == XLenVT)
     return;
@@ -10341,7 +10380,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   }
 
-  return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
+  return lowerVectorIntrinsicOperands(Op, DAG);
 }
 
 static inline SDValue getVCIXISDNodeWCHAIN(SDValue &Op, SelectionDAG &DAG,
@@ -10473,7 +10512,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_FVW_SE);
   }
 
-  return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
+  return lowerVectorIntrinsicOperands(Op, DAG);
 }
 
 SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
@@ -10557,7 +10596,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return getVCIXISDNodeVOID(Op, DAG, RISCVISD::SF_VC_FVW_SE);
   }
 
-  return lowerVectorIntrinsicScalars(Op, DAG, Subtarget);
+  return lowerVectorIntrinsicOperands(Op, DAG);
 }
 
 static unsigned getRVVReductionOp(unsigned ISDOpcode) {
