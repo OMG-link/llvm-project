@@ -1691,7 +1691,11 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     } else {
       Info.align = Align(DL.getTypeSizeInBits(MemTy->getScalarType()) / 8);
     }
-    Info.size = MemoryLocation::UnknownSize;
+    if (IsUnitStrided) {
+      Info.size = 0; // taken from Info.memVT
+    } else {
+      Info.size = MemoryLocation::UnknownSize;
+    }
     Info.flags |=
         IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
     return true;
