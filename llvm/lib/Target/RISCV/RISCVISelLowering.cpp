@@ -1679,6 +1679,21 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     if (!IsUnitStrided)
       MemTy = MemTy->getScalarType();
 
+    // If VLEN is a compile-time constant, perform constant folding on vscale in
+    // the memory access region's data type so that the alias analyzer can
+    // function properly. The alias analyzer currently cannot handle memory
+    // regions with vscale, so this serves as a temporary workaround.
+    if (VectorType *VecMemTy = dyn_cast<VectorType>(MemTy);
+        VecMemTy != nullptr && VecMemTy->isScalableTy()) {
+      if (auto VLenOpt = Subtarget.getRealVLen(); VLenOpt.has_value()) {
+        auto VLen = VLenOpt.value();
+        auto VScale = VLen / RISCV::RVVBitsPerBlock;
+        MemTy = VectorType::get(
+            VecMemTy->getElementType(),
+            VecMemTy->getElementCount().getKnownMinValue() * VScale, false);
+      }
+    }
+
     Info.memVT = getValueType(DL, MemTy);
     if (MemTy->isTargetExtTy()) {
       // RISC-V vector tuple type's alignment type should be its element type.
