@@ -2523,6 +2523,9 @@ unsigned SchedBoundary::getNextResourceCycleByInstance(unsigned InstanceIdx,
   // If this resource has never been used, always return cycle zero.
   if (NextUnreserved == InvalidCycle)
     return CurrCycle;
+  // For bottom-up scheduling add the cycles needed for the current operation.
+  if (!isTop())
+    NextUnreserved = std::max(CurrCycle, NextUnreserved + ReleaseAtCycle);
   return NextUnreserved;
 }
 
@@ -2908,8 +2911,9 @@ void SchedBoundary::bumpNode(SUnit *SU) {
     }
     if (SU->hasReservedResource) {
       // For reserved resources, record the highest cycle using the resource.
-      // This is the cycle in which we schedule this instruction plus the number
-      // of cycles the operations reserves the resource.
+      // For top-down scheduling, this is the cycle in which we schedule this
+      // instruction plus the number of cycles the operations reserves the
+      // resource. For bottom-up is it simply the instruction's cycle.
       for (TargetSchedModel::ProcResIter
              PI = SchedModel->getWriteProcResBegin(SC),
              PE = SchedModel->getWriteProcResEnd(SC); PI != PE; ++PI) {
@@ -2936,8 +2940,11 @@ void SchedBoundary::bumpNode(SUnit *SU) {
             unsigned ReservedUntil, InstanceIdx;
             std::tie(ReservedUntil, InstanceIdx) = getNextResourceCycle(
                 SC, PIdx, PI->ReleaseAtCycle, PI->AcquireAtCycle);
-            ReservedCycles[InstanceIdx] =
-                std::max(ReservedUntil, NextCycle + PI->ReleaseAtCycle);
+            if (isTop()) {
+              ReservedCycles[InstanceIdx] =
+                  std::max(ReservedUntil, NextCycle + PI->ReleaseAtCycle);
+            } else
+              ReservedCycles[InstanceIdx] = NextCycle;
           }
         }
       }
