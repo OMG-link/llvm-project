@@ -270,9 +270,9 @@ let Predicates = [HasVendorXSMTVDotII, IsRV64] in {
 // The A100 patterns take precedence when both extensions are enabled.
 def NoVendorXSMTVDotII : Predicate<"!Subtarget->hasVendorXSMTVDotII()">;
 
-class SMTK1DotPseudo<Instruction Base>
+class SMTK1DotPseudo<Instruction Base, RegisterClass Vs1Class = VR>
     : RISCVVPseudo<(outs VRM2:$vd_wb),
-                    (ins VRM2:$vd, VR:$vs1, VR:$vs2, AVL:$vl, sew:$sew)> {
+                    (ins VRM2:$vd, Vs1Class:$vs1, VR:$vs2, AVL:$vl, sew:$sew)> {
   let BaseInstr = Base;
   let VLMul = 0;
   let HasVLOp = 1;
@@ -295,4 +295,18 @@ let Predicates = [HasVendorXSMTVDot, NoVendorXSMTVDotII, IsRV64] in {
               (!cast<Instruction>("PseudoSMT_K1_VMADOT" # !toupper(Suffix) # "_M1")
                   VRM2:$vd, VR:$vs1, VR:$vs2, (XLenVT -1), (XLenVT 3))>;
   }
+
+  // Sliding-window dots: A is read from the aligned pair vs1, vs1+1 (two
+  // 4x8 int8 tiles stacked into 8 rows) at a window offset of 1, 2 or 3
+  // rows; B is one register as for the plain dot.
+  foreach Slide = ["1", "2", "3"] in
+    foreach Suffix = ["", "u", "su", "us"] in {
+      defvar Name = "VMADOT" # Slide # !toupper(Suffix);
+      defvar Real = !cast<Instruction>("SMT_" # Name);
+      defvar Intr = !cast<Intrinsic>("int_riscv_ime_vmadot" # Slide # Suffix);
+      def "PseudoSMT_K1_" # Name # "_M1" : SMTK1DotPseudo<Real, VRM2>;
+      def : Pat<(nxv4i32 (Intr nxv4i32:$vd, nxv16i8:$vs1, nxv8i8:$vs2)),
+                (!cast<Instruction>("PseudoSMT_K1_" # Name # "_M1")
+                    VRM2:$vd, VRM2:$vs1, VR:$vs2, (XLenVT -1), (XLenVT 3))>;
+    }
 }

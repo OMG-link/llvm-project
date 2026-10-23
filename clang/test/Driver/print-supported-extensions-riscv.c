@@ -234,7 +234,6 @@
 // CHECK-NEXT:     xsfvqmaccqoq         1.0       'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))
 // CHECK-NEXT:     xsifivecdiscarddlone 1.0       'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)
 // CHECK-NEXT:     xsifivecflushdlone   1.0       'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)
-// CHECK-NEXT:     xsmtime              1.0       'XSMTIME' (SpacemiT IME extension)
 // CHECK-NEXT:     xsmtvdot             1.0       'XSMTVDot' (SpacemiT Vector Dot Product Extension)
 // CHECK-NEXT:     xsmtvdotii           1.0       'XSMTVDotII' (SpacemiT Vector Extension for Matrix 2.0)
 // CHECK-NEXT:     xtheadba             1.0       'XTHeadBa' (T-Head address calculation instructions)

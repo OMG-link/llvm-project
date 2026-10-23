@@ -3,7 +3,7 @@
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+xgemmini %s \
 # RUN:        | llvm-objdump -d --mattr=+xgemmini - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
-# RUN: not llvm-mc -triple=riscv64 --mattr=+xsmtime < %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv64 --mattr=+xsmtvdot < %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-NO-XGEMMINI
 
 mvin ra, sp

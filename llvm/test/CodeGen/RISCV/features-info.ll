@@ -291,7 +291,6 @@
 ; CHECK-NEXT:   xsfvqmaccqoq                     - 'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4)).
 ; CHECK-NEXT:   xsifivecdiscarddlone             - 'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction).
 ; CHECK-NEXT:   xsifivecflushdlone               - 'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction).
-; CHECK-NEXT:   xsmtime                          - 'XSMTIME' (SpacemiT IME extension).
 ; CHECK-NEXT:   xsmtvdot                         - 'XSMTVDot' (SpacemiT Vector Dot Product Extension).
 ; CHECK-NEXT:   xsmtvdotii                       - 'XSMTVDotII' (SpacemiT Vector Extension for Matrix 2.0).
 ; CHECK-NEXT:   xtheadame                        - Enable all T-Head AME matrix extensions.

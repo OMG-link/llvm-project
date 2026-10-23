@@ -2097,13 +2097,6 @@ def HasVendorXSMTVDotII
       AssemblerPredicate<(all_of FeatureVendorXSMTVDotII),
                          "'XSMTVDotII' (SpacemiT Vector Extension for Matrix 2.0)">;
 
-def FeatureVendorXSMTIME
-    : RISCVExtension<1, 0, "SpacemiT IME extension">;
-def HasVendorXSMTIME
-    : Predicate<"Subtarget->hasVendorXSMTIME()">,
-      AssemblerPredicate<(all_of FeatureVendorXSMTIME),
-                         "'XSMTIME' (SpacemiT IME extension)">;
-
 def FeatureVendorXAIFET
     : RISCVExtension<1, 0, "AI Foundry ET Extension", [FeatureStdExtF]>;
 def HasXAIFET : Predicate<"Subtarget->hasXAIFET()">,

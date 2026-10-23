@@ -50,3 +50,38 @@ define <vscale x 4 x i32> @chain(<vscale x 4 x i32> %c, <vscale x 8 x i8> %a, <v
   %r1 = call <vscale x 4 x i32> @llvm.riscv.ime.vmadot.nxv4i32.nxv8i8.nxv8i8(<vscale x 4 x i32> %r0, <vscale x 8 x i8> %b, <vscale x 8 x i8> %a)
   ret <vscale x 4 x i32> %r1
 }
+
+; Sliding-window dots read A from an aligned register pair.
+declare <vscale x 4 x i32> @llvm.riscv.ime.vmadot1.nxv4i32.nxv16i8.nxv8i8(<vscale x 4 x i32>, <vscale x 16 x i8>, <vscale x 8 x i8>)
+declare <vscale x 4 x i32> @llvm.riscv.ime.vmadot2u.nxv4i32.nxv16i8.nxv8i8(<vscale x 4 x i32>, <vscale x 16 x i8>, <vscale x 8 x i8>)
+declare <vscale x 4 x i32> @llvm.riscv.ime.vmadot3su.nxv4i32.nxv16i8.nxv8i8(<vscale x 4 x i32>, <vscale x 16 x i8>, <vscale x 8 x i8>)
+declare <vscale x 4 x i32> @llvm.riscv.ime.vmadot3us.nxv4i32.nxv16i8.nxv8i8(<vscale x 4 x i32>, <vscale x 16 x i8>, <vscale x 8 x i8>)
+
+define <vscale x 4 x i32> @slide1(<vscale x 4 x i32> %c, <vscale x 16 x i8> %a, <vscale x 8 x i8> %b) {
+; CHECK-LABEL: slide1:
+; CHECK: vsetvli {{.*}}, zero, e8, m1,
+; CHECK-NEXT: smt.vmadot1 v8, v10, v12
+  %r = call <vscale x 4 x i32> @llvm.riscv.ime.vmadot1.nxv4i32.nxv16i8.nxv8i8(<vscale x 4 x i32> %c, <vscale x 16 x i8> %a, <vscale x 8 x i8> %b)
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 4 x i32> @slide2u(<vscale x 4 x i32> %c, <vscale x 16 x i8> %a, <vscale x 8 x i8> %b) {
+; CHECK-LABEL: slide2u:
+; CHECK: smt.vmadot2u v8, v10, v12
+  %r = call <vscale x 4 x i32> @llvm.riscv.ime.vmadot2u.nxv4i32.nxv16i8.nxv8i8(<vscale x 4 x i32> %c, <vscale x 16 x i8> %a, <vscale x 8 x i8> %b)
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 4 x i32> @slide3su(<vscale x 4 x i32> %c, <vscale x 16 x i8> %a, <vscale x 8 x i8> %b) {
+; CHECK-LABEL: slide3su:
+; CHECK: smt.vmadot3su v8, v10, v12
+  %r = call <vscale x 4 x i32> @llvm.riscv.ime.vmadot3su.nxv4i32.nxv16i8.nxv8i8(<vscale x 4 x i32> %c, <vscale x 16 x i8> %a, <vscale x 8 x i8> %b)
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 4 x i32> @slide3us(<vscale x 4 x i32> %c, <vscale x 16 x i8> %a, <vscale x 8 x i8> %b) {
+; CHECK-LABEL: slide3us:
+; CHECK: smt.vmadot3us v8, v10, v12
+  %r = call <vscale x 4 x i32> @llvm.riscv.ime.vmadot3us.nxv4i32.nxv16i8.nxv8i8(<vscale x 4 x i32> %c, <vscale x 16 x i8> %a, <vscale x 8 x i8> %b)
+  ret <vscale x 4 x i32> %r
+}

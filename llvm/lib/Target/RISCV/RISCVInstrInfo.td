@@ -2535,7 +2535,6 @@ include "RISCVInstrInfoXAndes.td"
 include "RISCVInstrInfoXSpacemiT.td"
 include "RISCVInstrInfoXGemmini.td"
 include "RISCVInstrInfoXBuckyballExt.td"
-include "RISCVInstrInfoXSpacemiTIME.td"
 include "RISCVInstrInfoXAIF.td"
 
 //===----------------------------------------------------------------------===//
