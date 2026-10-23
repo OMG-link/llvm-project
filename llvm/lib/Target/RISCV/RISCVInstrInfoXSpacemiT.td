@@ -260,3 +260,39 @@ let Predicates = [HasVendorXSMTVDotII, IsRV64] in {
             (PseudoSMT_VFWMADOT_M1 VRM2:$vd, VR:$vs1, VR:$vs2,
                                  (XLenVT -1), (XLenVT 5))>;
 }
+
+// K1 (XSMTVDot) integer dot codegen. At VLEN=256 one vector register holds
+// the 4x8 int8 A or packed B tile and an aligned register pair holds the 4x4
+// int32 C tile, so the intrinsic types are the same as the A100 ones above:
+// nxv4i32 += nxv8i8 * nxv8i8. The instruction reads both whole input
+// registers and writes the whole pair irrespective of VL; it is issued under
+// e8, m1, VLMAX, the configuration the SpacemiT intrinsic kernels use.
+// The A100 patterns take precedence when both extensions are enabled.
+def NoVendorXSMTVDotII : Predicate<"!Subtarget->hasVendorXSMTVDotII()">;
+
+class SMTK1DotPseudo<Instruction Base>
+    : RISCVVPseudo<(outs VRM2:$vd_wb),
+                    (ins VRM2:$vd, VR:$vs1, VR:$vs2, AVL:$vl, sew:$sew)> {
+  let BaseInstr = Base;
+  let VLMul = 0;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let ReadsPastVL = 1;
+  let Uses = [VL, VTYPE];
+  let Constraints = "@earlyclobber $vd_wb, $vd = $vd_wb";
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+let Predicates = [HasVendorXSMTVDot, NoVendorXSMTVDotII, IsRV64] in {
+  foreach Suffix = ["", "u", "su", "us"] in {
+    defvar Real = !cast<Instruction>("SMT_VMADOT" # !toupper(Suffix));
+    defvar Intr = !cast<Intrinsic>("int_riscv_ime_vmadot" # Suffix);
+    def "PseudoSMT_K1_VMADOT" # !toupper(Suffix) # "_M1" :
+        SMTK1DotPseudo<Real>;
+    def : Pat<(nxv4i32 (Intr nxv4i32:$vd, nxv8i8:$vs1, nxv8i8:$vs2)),
+              (!cast<Instruction>("PseudoSMT_K1_VMADOT" # !toupper(Suffix) # "_M1")
+                  VRM2:$vd, VR:$vs1, VR:$vs2, (XLenVT -1), (XLenVT 3))>;
+  }
+}
