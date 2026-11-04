@@ -784,6 +784,15 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   return indicesAfterCollapsing;
 }
 
+/// Returns `mask`, which has the shape of a transfer's vector, as a 1-D mask
+/// in row-major order, matching the flattened vector.
+static Value flattenMask(PatternRewriter &rewriter, Location loc, Value mask) {
+  auto maskType = cast<VectorType>(mask.getType());
+  auto flatType =
+      VectorType::get({maskType.getNumElements()}, maskType.getElementType());
+  return vector::ShapeCastOp::create(rewriter, loc, flatType, mask);
+}
+
 namespace {
 /// Rewrites contiguous row-major vector.transfer_read ops by inserting
 /// memref.collapse_shape on the source so that the resulting
@@ -848,10 +857,6 @@ public:
       LDBG() << "  -> Not minor identity permutation map, skipping";
       return failure();
     }
-    if (transferReadOp.getMask()) {
-      LDBG() << "  -> Has mask, skipping";
-      return failure();
-    }
 
     // Determine vector dimensions to collapse.
     // Ignore a leading sequence of adjacent unit dimensions in the vector.
@@ -895,10 +900,16 @@ public:
     VectorType flatVectorType = VectorType::get({vectorType.getNumElements()},
                                                 vectorType.getElementType());
     LDBG() << "  -> Creating flattened vector type: " << flatVectorType;
+    // The mask has the vector's shape, so it flattens the same way.
+    Value flatMask;
+    if (Value mask = transferReadOp.getMask())
+      flatMask = flattenMask(rewriter, loc, mask);
     vector::TransferReadOp flatRead = vector::TransferReadOp::create(
         rewriter, loc, flatVectorType, collapsedSource, collapsedIndices,
         transferReadOp.getPadding(), collapsedMap);
     flatRead.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
+    if (flatMask)
+      flatRead.getMaskMutable().assign(flatMask);
     LDBG() << "  -> Created flat transfer_read: " << *flatRead;
 
     // 4. Replace the old transfer_read with the new one reading from the
@@ -962,8 +973,6 @@ public:
       return failure();
     if (!transferWriteOp.getPermutationMap().isMinorIdentity())
       return failure();
-    if (transferWriteOp.getMask())
-      return failure();
 
     // Determine vector dimensions to collapse.
     // Ignore a leading sequence of adjacent unit dimensions in the vector.
@@ -1005,10 +1014,16 @@ public:
                                                 vectorType.getElementType());
     Value flatVector =
         vector::ShapeCastOp::create(rewriter, loc, flatVectorType, vector);
+    // The mask has the vector's shape, so it flattens the same way.
+    Value flatMask;
+    if (Value mask = transferWriteOp.getMask())
+      flatMask = flattenMask(rewriter, loc, mask);
     vector::TransferWriteOp flatWrite = vector::TransferWriteOp::create(
         rewriter, loc, flatVector, collapsedSource, collapsedIndices,
         collapsedMap);
     flatWrite.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
+    if (flatMask)
+      flatWrite.getMaskMutable().assign(flatMask);
 
     // 4. Replace the old transfer_write with the new one writing the
     // collapsed shape

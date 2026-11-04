@@ -826,3 +826,109 @@ func.func @transfer_write_multi_dim_unit_vector(
 // CHECK-128B-LABEL: func @transfer_write_multi_dim_unit_vector
 //       CHECK-128B:   vector.shape_cast {{.*}}: vector<1x1x1xi8> to vector<1xi8>
 //       CHECK-128B:   vector.transfer_write {{.*}}: vector<1xi8>, memref<5x4x3x2xi8>
+
+// -----
+
+/// Masked transfers flatten like unmasked ones: the mask has the vector's
+/// shape and is flattened the same way, in row-major order.
+
+func.func @masked_transfer_read_dims_match_contiguous(
+    %mem : memref<8x8xf16, strided<[8, 1], offset: ?>>) -> vector<8x8xf16> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %cst = arith.constant 0.0 : f16
+  %mask = vector.create_mask %c8, %c1 : vector<8x8xi1>
+  %res = vector.transfer_read %mem[%c0, %c0], %cst, %mask {in_bounds = [true, true]} :
+    memref<8x8xf16, strided<[8, 1], offset: ?>>, vector<8x8xf16>
+  return %res : vector<8x8xf16>
+}
+
+// CHECK-LABEL: func @masked_transfer_read_dims_match_contiguous
+// CHECK-SAME:    %[[MEM:[0-9a-zA-Z]+]]: memref<8x8xf16
+// CHECK:         %[[PAD:.+]] = arith.constant 0.000000e+00 : f16
+// CHECK:         %[[MASK:.+]] = vector.create_mask {{.*}} : vector<8x8xi1>
+// CHECK:         %[[COLLAPSED:.+]] = memref.collapse_shape %[[MEM]] {{.}}[0, 1]
+// CHECK:         %[[MASK1D:.+]] = vector.shape_cast %[[MASK]] : vector<8x8xi1> to vector<64xi1>
+// CHECK:         %[[READ1D:.+]] = vector.transfer_read %[[COLLAPSED]]{{.*}}, %[[PAD]], %[[MASK1D]] {in_bounds = [true]}
+// CHECK-SAME:      : memref<64xf16, strided<[1], offset: ?>>, vector<64xf16>
+// CHECK:         %[[VEC2D:.+]] = vector.shape_cast %[[READ1D]] : vector<64xf16> to vector<8x8xf16>
+// CHECK:         return %[[VEC2D]]
+
+/// The trailing dimension is already 128 bits wide.
+// CHECK-128B-LABEL: func @masked_transfer_read_dims_match_contiguous
+//   CHECK-128B-NOT:   memref.collapse_shape
+
+// -----
+
+/// A leading unit dimension of the vector and the mask is dropped from the
+/// collapsed memref; the mask still flattens over the whole vector shape.
+
+func.func @masked_transfer_read_leading_unit_dim(
+    %mem : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<1x3x2xi8> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0 : i8
+  %mask = vector.constant_mask [1, 2, 1] : vector<1x3x2xi1>
+  %res = vector.transfer_read %mem[%c0, %c0, %c0, %c0], %cst, %mask {in_bounds = [true, true, true]} :
+    memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<1x3x2xi8>
+  return %res : vector<1x3x2xi8>
+}
+
+// CHECK-LABEL: func @masked_transfer_read_leading_unit_dim
+// CHECK:         %[[MASK:.+]] = vector.constant_mask [1, 2, 1] : vector<1x3x2xi1>
+// CHECK:         %[[COLLAPSED:.+]] = memref.collapse_shape %{{.*}} {{.}}[0], [1], [2, 3]
+// CHECK:         %[[MASK1D:.+]] = vector.shape_cast %[[MASK]] : vector<1x3x2xi1> to vector<6xi1>
+// CHECK:         vector.transfer_read %[[COLLAPSED]]{{.*}}, %[[MASK1D]] {in_bounds = [true]}
+// CHECK-SAME:      : memref<5x4x6xi8, strided<[24, 6, 1], offset: ?>>, vector<6xi8>
+
+// CHECK-128B-LABEL: func @masked_transfer_read_leading_unit_dim
+//       CHECK-128B:   memref.collapse_shape
+
+// -----
+
+func.func @masked_transfer_write_dims_match_contiguous(
+    %mem : memref<8x8xf32, strided<[8, 1], offset: ?>>, %vec : vector<8x8xf32>) {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %mask = vector.create_mask %c4, %c8 : vector<8x8xi1>
+  vector.transfer_write %vec, %mem[%c0, %c0], %mask {in_bounds = [true, true]} :
+    vector<8x8xf32>, memref<8x8xf32, strided<[8, 1], offset: ?>>
+  return
+}
+
+// CHECK-LABEL: func @masked_transfer_write_dims_match_contiguous
+// CHECK-SAME:    %[[MEM:[0-9a-zA-Z]+]]: memref<8x8xf32{{.*}}>, %[[VEC:[0-9a-zA-Z]+]]: vector<8x8xf32>
+// CHECK:         %[[MASK:.+]] = vector.create_mask {{.*}} : vector<8x8xi1>
+// CHECK:         %[[COLLAPSED:.+]] = memref.collapse_shape %[[MEM]] {{.}}[0, 1]
+// CHECK:         %[[VEC1D:.+]] = vector.shape_cast %[[VEC]] : vector<8x8xf32> to vector<64xf32>
+// CHECK:         %[[MASK1D:.+]] = vector.shape_cast %[[MASK]] : vector<8x8xi1> to vector<64xi1>
+// CHECK:         vector.transfer_write %[[VEC1D]], %[[COLLAPSED]]{{.*}}, %[[MASK1D]] {in_bounds = [true]}
+// CHECK-SAME:      : vector<64xf32>, memref<64xf32, strided<[1], offset: ?>>
+
+// CHECK-128B-LABEL: func @masked_transfer_write_dims_match_contiguous
+//   CHECK-128B-NOT:   memref.collapse_shape
+
+// -----
+
+/// Out-of-bounds dimensions are still not flattened, masked or not. (A
+/// static dimension would be inferred in bounds, hence the dynamic one.)
+
+func.func @negative_masked_out_of_bound_transfer_read(
+    %mem : memref<?x8xf16, strided<[8, 1], offset: ?>>) -> vector<8x8xf16> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %cst = arith.constant 0.0 : f16
+  %mask = vector.create_mask %c8, %c1 : vector<8x8xi1>
+  %res = vector.transfer_read %mem[%c0, %c0], %cst, %mask {in_bounds = [false, true]} :
+    memref<?x8xf16, strided<[8, 1], offset: ?>>, vector<8x8xf16>
+  return %res : vector<8x8xf16>
+}
+
+// CHECK-LABEL: func @negative_masked_out_of_bound_transfer_read
+// CHECK-NOT:     memref.collapse_shape
+// CHECK-NOT:     vector.shape_cast
+
+// CHECK-128B-LABEL: func @negative_masked_out_of_bound_transfer_read
+//   CHECK-128B-NOT:   memref.collapse_shape
