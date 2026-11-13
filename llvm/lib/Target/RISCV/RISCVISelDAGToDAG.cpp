@@ -2506,6 +2506,47 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // By default we do not custom select any intrinsic.
     default:
       break;
+    case Intrinsic::riscv_sched_barrier:
+    case Intrinsic::riscv_sched_barrier_mem: {
+      MVT VT = Node->getSimpleValueType(0);
+      unsigned Opc;
+      if (VT == Subtarget->getXLenVT()) {
+        Opc = RISCV::PseudoSchedBarrierGPR;
+      } else if (VT.isScalableVector()) {
+        switch (RISCVTargetLowering::getRegClassIDForVecVT(VT)) {
+        case RISCV::VRRegClassID:
+          Opc = RISCV::PseudoSchedBarrierVR;
+          break;
+        case RISCV::VRM2RegClassID:
+          Opc = RISCV::PseudoSchedBarrierVRM2;
+          break;
+        case RISCV::VRM4RegClassID:
+          Opc = RISCV::PseudoSchedBarrierVRM4;
+          break;
+        case RISCV::VRM8RegClassID:
+          Opc = RISCV::PseudoSchedBarrierVRM8;
+          break;
+        default:
+          reportFatalUsageError(
+              "llvm.riscv.sched.barrier: unsupported vector type");
+        }
+      } else {
+        reportFatalUsageError("llvm.riscv.sched.barrier: operand must be XLEN "
+                              "or a scalable vector");
+      }
+      SDValue Chain = Node->getOperand(0);
+      // Feed the operand through a COPY, as inline asm operands are. The
+      // coalescer removes it; until then the value's other definitions see
+      // only copy uses here, which keeps MachineCSE from merging equal
+      // definitions (e.g. two zero splats) into one value that stays live
+      // across the barrier.
+      SDValue Val = SDValue(CurDAG->getMachineNode(TargetOpcode::COPY, DL, VT,
+                                                   Node->getOperand(2)),
+                            0);
+      ReplaceNode(Node,
+                  CurDAG->getMachineNode(Opc, DL, VT, MVT::Other, Val, Chain));
+      return;
+    }
     case Intrinsic::riscv_vlseg2:
     case Intrinsic::riscv_vlseg3:
     case Intrinsic::riscv_vlseg4:

@@ -2547,3 +2547,20 @@ include "RISCVInstrGISel.td"
 include "RISCVInstrInfoXBOSCAME.td"
 // Matrix(XT)
 include "RISCVInstrInfoXTHeadAME.td"
+
+//===----------------------------------------------------------------------===//
+// Scheduling barrier: llvm.riscv.sched.barrier(.mem)
+//
+// The result is tied to the input, so the value stays in its register and
+// the pseudo emits nothing. The side effect keeps it from being moved, merged
+// or deleted; no VL or VTYPE operand is attached.
+//===----------------------------------------------------------------------===//
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0, hasNoSchedulingInfo = 1,
+    Size = 0, Constraints = "$rd = $rs" in {
+def PseudoSchedBarrierGPR  : Pseudo<(outs GPR:$rd),  (ins GPR:$rs),  []>;
+def PseudoSchedBarrierVR   : Pseudo<(outs VR:$rd),   (ins VR:$rs),   []>;
+def PseudoSchedBarrierVRM2 : Pseudo<(outs VRM2:$rd), (ins VRM2:$rs), []>;
+def PseudoSchedBarrierVRM4 : Pseudo<(outs VRM4:$rd), (ins VRM4:$rs), []>;
+def PseudoSchedBarrierVRM8 : Pseudo<(outs VRM8:$rd), (ins VRM8:$rs), []>;
+}

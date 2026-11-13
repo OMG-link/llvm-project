@@ -419,3 +419,21 @@ let TargetPrefix = "riscv" in {
                                                llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
                                               []>;
 }
+
+//===----------------------------------------------------------------------===//
+// Scheduling barrier
+//
+// `llvm.riscv.sched.barrier(x)` returns `x` unchanged while hiding that from
+// the optimizers: every use of the result depends on the barrier, and the
+// barrier depends on the definition of `x`. It executes no instruction and
+// touches neither VL nor VTYPE. The plain form only orders against other
+// operations with inaccessible-memory effects; the `.mem` form also orders
+// against every memory access.
+let TargetPrefix = "riscv" in {
+  def int_riscv_sched_barrier
+      : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>],
+                              [IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+  def int_riscv_sched_barrier_mem
+      : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>],
+                              [IntrHasSideEffects]>;
+}

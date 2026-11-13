@@ -407,6 +407,15 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
+  case RISCV::PseudoSchedBarrierGPR:
+  case RISCV::PseudoSchedBarrierVR:
+  case RISCV::PseudoSchedBarrierVRM2:
+  case RISCV::PseudoSchedBarrierVRM4:
+  case RISCV::PseudoSchedBarrierVRM8:
+    // The result is tied to the input; nothing to emit.
+    if (isVerbose())
+      OutStreamer->emitRawComment(" sched barrier");
+    return;
   case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
