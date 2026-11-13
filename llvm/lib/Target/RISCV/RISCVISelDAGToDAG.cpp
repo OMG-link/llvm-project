@@ -2535,14 +2535,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                               "or a scalable vector");
       }
       SDValue Chain = Node->getOperand(0);
-      // Feed the operand through a COPY, as inline asm operands are. The
-      // coalescer removes it; until then the value's other definitions see
-      // only copy uses here, which keeps MachineCSE from merging equal
-      // definitions (e.g. two zero splats) into one value that stays live
-      // across the barrier.
-      SDValue Val = SDValue(CurDAG->getMachineNode(TargetOpcode::COPY, DL, VT,
-                                                   Node->getOperand(2)),
-                            0);
+      SDValue Val = Node->getOperand(2);
       ReplaceNode(Node,
                   CurDAG->getMachineNode(Opc, DL, VT, MVT::Other, Val, Chain));
       return;

@@ -2236,6 +2236,23 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   }
 }
 
+bool RISCVInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                          const MachineBasicBlock *MBB,
+                                          const MachineFunction &MF) const {
+  // llvm.riscv.sched.barrier: no instruction is scheduled across it, whether
+  // or not it uses the barrier's values.
+  switch (MI.getOpcode()) {
+  case RISCV::PseudoSchedBarrierGPR:
+  case RISCV::PseudoSchedBarrierVR:
+  case RISCV::PseudoSchedBarrierVRM2:
+  case RISCV::PseudoSchedBarrierVRM4:
+  case RISCV::PseudoSchedBarrierVRM8:
+    return true;
+  default:
+    return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+  }
+}
+
 bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   const unsigned Opcode = MI.getOpcode();
   switch (Opcode) {

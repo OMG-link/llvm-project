@@ -63,3 +63,23 @@ define i64 @scalar(i64 %a) {
 declare <vscale x 2 x i32> @llvm.riscv.sched.barrier.nxv2i32(<vscale x 2 x i32>)
 declare <vscale x 4 x i32> @llvm.riscv.sched.barrier.mem.nxv4i32(<vscale x 4 x i32>)
 declare i64 @llvm.riscv.sched.barrier.i64(i64)
+
+; The barrier is a scheduling boundary: the zero splats written before it stay
+; before it and the multiply-add written after it stays after it, although neither
+; uses the barrier's value.
+; CHECK-LABEL: boundary:
+; CHECK: vmv.v.i
+; CHECK: vmv.v.i
+; CHECK-NOT: vmacc
+; CHECK: # sched barrier
+; CHECK-NOT: vmv.v.i
+; CHECK: vmacc.vv
+define void @boundary(ptr %p, ptr %q, <vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
+  store <vscale x 2 x i32> zeroinitializer, ptr %p
+  store <vscale x 2 x i32> splat (i32 1), ptr %q
+  %y = call <vscale x 2 x i32> @llvm.riscv.sched.barrier.nxv2i32(<vscale x 2 x i32> %a)
+  %m = mul <vscale x 2 x i32> %b, %b
+  %z = add <vscale x 2 x i32> %y, %m
+  store <vscale x 2 x i32> %z, ptr %p
+  ret void
+}
